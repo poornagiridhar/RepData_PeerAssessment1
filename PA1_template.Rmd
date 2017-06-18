@@ -7,19 +7,74 @@ output:
 
 
 ## Loading and preprocessing the data
-
+```{r}
+library(dplyr)
+activity_data<-read.csv("activity.csv")
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r r1}
+sum1<-activity_data %>% group_by(date) %>% summarize(total_per_day = sum(steps,na.rm=TRUE))
+hist(x=sum1$total_per_day, main = "Histogram of Total Steps per Day")
+mean1<-mean(sum1$total_per_day)
+median1<-median(sum1$total_per_day)
+```
+The mean of total number of steps per day is `r round(mean1, digits=2) ` and the median of total number of steps per day is `r round(median1,digits=2) `
+_____________________________________________________________________________________________________________
 
 
 
 ## What is the average daily activity pattern?
+```{r r2}
+avg1<- activity_data %>% group_by(interval) %>% summarize(mean_no_of_steps = mean(steps,na.rm=TRUE))
+plot(avg1,type = "l", main = "Average Daily Activity")
+max1<-max(avg1$mean_no_of_steps)
+int_max<-avg1[avg1$mean_no_of_steps==max1,1]
+```
+The 5-minute interval, on average across all the days in the dataset, containing the maximum number of steps is 
+ `r int_max `
+_____________________________________________________________________________________________________________
 
 
 
 ## Imputing missing values
+```{r}
+  sum(is.na(activity_data$steps))
+```
+The strategy chosen for replacing missing values is using the mean for the 5 minute interval 
+```{r}
+  mod_activity_data<-activity_data
+  for (i in 1:length(mod_activity_data$steps)){
+    if (is.na(mod_activity_data[i,"steps"])){
+      mod_activity_data[i,"steps"]<-avg1[avg1$interval==mod_activity_data[i,"interval"],"mean_no_of_steps"]
+    }
+  }
+# All missing values removed
+  sum(is.na(mod_activity_data$steps))
+sum2<-mod_activity_data %>% group_by(date) %>% summarize(total_per_day = sum(steps,na.rm=TRUE))
+hist(x=sum2$total_per_day, main = "Histogram of Total Steps per Day")
+mean2<-mean(sum2$total_per_day)
+median2<-median(sum2$total_per_day)
+```
+The modified mean of total number of steps per day is `r round(mean2,digits=2) ` and the median of total number of steps per day is `r round(median2,digits=2) `. 
+
+After imputing the missing values, the mean has shifted from `r round(mean1,digits=2)` to `r round(mean2,digits=2)`. The median has shifted from `r round(median1,digits=2)` to `r round(median2,digits=2)`.
+_____________________________________________________________________________________________________________
+
 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r fig.height=15, fig.width=18}
+  mod_activity_data$day<-ifelse(weekdays(as.Date(mod_activity_data[,"date"],format = "%Y-%m-%d")) %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"),"Weekday","Weekend")
+weekday_data<-subset(mod_activity_data,mod_activity_data$day=="Weekday")
+weekday_activity<-weekday_data %>% group_by(interval) %>% summarize(no_of_steps = mean(steps))
+weekend_data<-subset(mod_activity_data,mod_activity_data$day=="Weekend")
+weekend_activity<-weekend_data %>% group_by(interval) %>% summarize(no_of_steps = mean(steps))
+par(mfrow =c(2,1), mar = c(4,4,12,4))
+plot(x<-weekday_activity$interval,y<-weekday_activity$no_of_steps, type = "l", main = "Weekday", xlab="interval", ylab= "no of steps")
+plot(x<-weekend_activity$interval,y<-weekend_activity$no_of_steps, type = "l", main = "Weekend",xlab="interval", ylab= "no of steps")
+title(main = "
+      Comparative Analysis of Daily Activity", outer = TRUE)
+```
